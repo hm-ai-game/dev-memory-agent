@@ -1,0 +1,20 @@
+{
+  "name": "dev-memory-local",
+  "interface": {
+    "displayName": "Dev Memory (Local)"
+  },
+  "plugins": [
+    {
+      "name": "dev-memory-agent",
+      "source": {
+        "source": "local",
+        "path": "./"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    }
+  ]
+}

@@ -2,7 +2,7 @@
 
 ## 目标与边界
 
-此 Agent 在 Codex 中运行。它从开发和验证过程提炼关键节点、技术决策、失败路径和阶段进度，供后续查询、流程图和项目交接使用。普通 ChatGPT 聊天与 Work 不纳入第一阶段。记忆按项目隔离，不存储对话原文，也不提供 UI。
+此 Agent 在 Codex 中运行。它从开发和验证过程提炼新增需求、关键节点、技术决策、失败路径和阶段进度，供后续查询、流程图和项目交接使用。普通 ChatGPT 聊天与 Work 不纳入第一阶段。记忆按项目隔离，不存储对话原文，也不提供 UI。
 
 Agent 源码与个人安装包放在本仓库。目标项目首次启用后，项目自己的 `.dev-memory/` 是可交接的正式记录。下一位开发者仅需获得目标项目及其 `.dev-memory/`；无需获得本机其他项目的记忆。
 
@@ -27,7 +27,8 @@ Codex 的 hook 触发与信任设置属于宿主环境。插件必须安装并�
 | `kind`、`title`、`summary`、`phase`、`status` | 节点内容与阶段 |
 | `options`、`chosen_option`、`rationale` | 方案取舍及原因 |
 | `outcome`、`evidence_level`、`evidence` | 实施和验证结果 |
-| `predecessors`、`next_steps` | 流程关系及进度 |
+| `predecessors`、`affects`、`next_steps` | 流程关系、受新需求影响的旧节点及进度 |
+| `acceptance_criteria` | 新需求的验收条件 |
 | `source_ref`、`source_key` | 可追溯引用和幂等写入键 |
 | `impact`、`approved_by_user`、`project_update` | 重要变更审批与项目方向更新 |
 
@@ -35,7 +36,7 @@ Codex 的 hook 触发与信任设置属于宿主环境。插件必须安装并�
 
 ## 存储与查询
 
-项目文件是正式来源；查询从 JSONL 重建当前节点，支持关键词、节点类型、阶段过滤。首版采用线性扫描，适合本地项目规模；以后可增加 SQLite 全文索引作为可重建缓存，不改变交接格式。`FLOW.md` 用节点的 `predecessors` 关系生成 Mermaid 图，并按阶段分组；决策节点在图中显示选择及简短理由，图下列出各备选方案的完整取舍。也可用 CLI 生成单阶段图。
+项目文件是正式来源；查询从 JSONL 重建当前节点，支持关键词、节点类型、阶段过滤。首版采用线性扫描，适合本地项目规模；以后可增加 SQLite 全文索引作为可重建缓存，不改变交接格式。`FLOW.md` 用节点的 `predecessors` 关系生成 Mermaid 图，并按阶段分组；决策节点在图中显示选择及简短理由，图下列出各备选方案的完整取舍；新增需求可用虚线标明对旧节点的影响。也可用 CLI 生成单阶段图。
 
 `.runtime/`、`inbox/` 和写入锁被项目内 `.gitignore` 排除。运行时标记只包含 turn ID 和处理结果。聊天内容只在 Codex 当前上下文中用于提炼节点，不写入项目记忆。
 

@@ -37,7 +37,7 @@ def main() -> None:
     elif name == "UserPromptSubmit" and isinstance(turn_id, str):
         instruction = (
             "Development memory is enabled. At the end of this turn, if you implemented, "
-            "verified, rejected, or chose a development approach, record one or more concise "
+            "verified, rejected, chose a development approach, or received a new requirement, record one or more concise "
             f"nodes with {command} record --project \"{root}\" --input <json-file> "
             f"--turn-id {turn_id}. If no durable development node occurred, run "
             f"{command} ack --project \"{root}\" --turn-id {turn_id}. "
@@ -56,7 +56,7 @@ def main() -> None:
         else:
             reason = (
                 "Before finishing, review this turn for durable development nodes. "
-                "If a choice, implementation, test result, failed approach, blocker, or milestone occurred, "
+                "If a new requirement, choice, implementation, test result, failed approach, blocker, or milestone occurred, "
                 f"record it with {command} record --project \"{root}\" "
                 f"--input <json-file> --turn-id {turn_id}. "
                 "If none occurred, explicitly run "

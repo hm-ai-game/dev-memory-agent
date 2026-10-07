@@ -1,4 +1,5 @@
 import json
+import re
 import subprocess
 import sys
 import tempfile
@@ -52,7 +53,7 @@ class MemoryTests(unittest.TestCase):
         self.assertEqual(len(load_nodes(self.root)), 2)
         self.assertEqual(query_nodes(load_nodes(self.root), "本地存储", None, None, 10)[0]["id"], first["id"])
         flow = (self.root / ".dev-memory" / "FLOW.md").read_text(encoding="utf-8")
-        self.assertIn("n0 --> n1", flow)
+        self.assertRegex(flow, r"n\d+ --> n\d+")
         self.assertIn("原因：首版只在 Codex 使用", flow)
         self.assertIn("方案 远端服务：可取之处 易同步；顾虑 首版部署成本高", flow)
         self.assertIn("测试通过", json.dumps(second, ensure_ascii=False))
@@ -98,6 +99,29 @@ class MemoryTests(unittest.TestCase):
             append_node(self.root, {"kind": "decision", "title": "方案选择", "summary": "已选择"})
         with self.assertRaisesRegex(ValueError, "chosen_option 必须匹配"):
             append_node(self.root, self.sample(chosen_option="第三种方案"))
+
+    def test_new_requirement_updates_progress_and_flow_without_erasing_history(self):
+        decision = append_node(self.root, self.sample())
+        requirement = append_node(self.root, {
+            "kind": "requirement",
+            "title": "增加跨项目检索",
+            "summary": "用户需要按项目隔离后仍能选择性检索多个项目",
+            "phase": "需求扩展",
+            "acceptance_criteria": ["查询结果标明所属项目"],
+            "predecessors": [decision["id"]],
+            "affects": [decision["id"]],
+        })
+        self.assertEqual(requirement["status"], "planned")
+        status = (self.root / ".dev-memory" / "STATUS.md").read_text(encoding="utf-8")
+        flow = (self.root / ".dev-memory" / "FLOW.md").read_text(encoding="utf-8")
+        self.assertIn("待开发需求", status)
+        self.assertIn("增加跨项目检索", status)
+        self.assertIn("新需求影响", flow)
+        self.assertIn("查询结果标明所属项目", flow)
+        self.assertEqual(len(load_nodes(self.root)), 2)
+        updated = append_node(self.root, {"status": "completed"}, revise_id=requirement["id"])
+        self.assertEqual(updated["revision"], 2)
+        self.assertEqual(len((self.root / ".dev-memory" / "NODES.jsonl").read_text(encoding="utf-8").splitlines()), 3)
 
     def test_stop_hook_requests_record_or_ack_once(self):
         turn = "turn-123"

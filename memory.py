@@ -21,7 +21,7 @@ from typing import Any
 MEMORY_DIR = ".dev-memory"
 SCHEMA_VERSION = 1
 KINDS = {
-    "milestone", "decision", "implementation", "verification",
+    "requirement", "milestone", "decision", "implementation", "verification",
     "failed_approach", "blocker", "direction_change",
 }
 STATUSES = {
@@ -34,7 +34,7 @@ MANAGED_END = "<!-- dev-memory-agent:end -->"
 
 
 def now() -> str:
-    return datetime.now(timezone.utc).isoformat(timespec="seconds")
+    return datetime.now(timezone.utc).isoformat(timespec="microseconds")
 
 
 def read_json(path: Path) -> dict[str, Any]:
@@ -152,7 +152,7 @@ def normalize_node(data: dict[str, Any], *, existing: dict[str, Any] | None = No
     allowed = {
         "id", "kind", "title", "summary", "phase", "status", "impact",
         "options", "chosen_option", "rationale", "outcome", "evidence_level",
-        "evidence", "predecessors", "next_steps", "source_ref", "source_key",
+        "evidence", "predecessors", "affects", "acceptance_criteria", "next_steps", "source_ref", "source_key",
         "approved_by_user", "occurred_at", "project_update",
     }
     unknown = set(data) - allowed
@@ -160,7 +160,8 @@ def normalize_node(data: dict[str, Any], *, existing: dict[str, Any] | None = No
         raise ValueError("未知节点字段：" + ", ".join(sorted(unknown)))
     merged = {**(existing or {}), **data}
     kind = _string(merged.get("kind"), "kind", True)
-    status = _string(merged.get("status", "completed"), "status", True)
+    default_status = "planned" if kind == "requirement" else "completed"
+    status = _string(merged.get("status", default_status), "status", True)
     level = _string(merged.get("evidence_level", "unverified"), "evidence_level", True)
     if kind not in KINDS:
         raise ValueError(f"未知 kind：{kind}")
@@ -233,6 +234,8 @@ def normalize_node(data: dict[str, Any], *, existing: dict[str, Any] | None = No
         "evidence_level": level,
         "evidence": normalized_evidence,
         "predecessors": _string_list(merged.get("predecessors"), "predecessors"),
+        "affects": _string_list(merged.get("affects"), "affects"),
+        "acceptance_criteria": _string_list(merged.get("acceptance_criteria"), "acceptance_criteria"),
         "next_steps": _string_list(merged.get("next_steps"), "next_steps"),
         "source_ref": _string(merged.get("source_ref"), "source_ref"),
         "source_key": _string(merged.get("source_key"), "source_key"),
@@ -262,6 +265,9 @@ def append_node(root: Path, data: dict[str, Any], *, revise_id: str | None = Non
         for predecessor in item["predecessors"]:
             if predecessor == item["id"] or predecessor not in nodes:
                 raise ValueError(f"无效的前置节点：{predecessor}")
+        for affected in item["affects"]:
+            if affected == item["id"] or affected not in nodes:
+                raise ValueError(f"无效的受影响节点：{affected}")
         with (memory / "NODES.jsonl").open("a", encoding="utf-8", newline="\n") as handle:
             handle.write(json.dumps(item, ensure_ascii=False, separators=(",", ":")) + "\n")
             handle.flush()
@@ -291,18 +297,20 @@ def render_project(project: dict[str, Any]) -> str:
 
 
 def render_status(project: dict[str, Any], nodes: dict[str, dict[str, Any]]) -> str:
-    ordered = sorted(nodes.values(), key=lambda x: (x["occurred_at"], x["created_at"], x["id"]))
+    ordered = sorted(nodes.values(), key=lambda x: (x["occurred_at"], x["created_at"]))
     active = [n for n in ordered if n["status"] not in {"superseded", "pending_approval"}]
     done = [n for n in active if n["status"] == "completed"]
     doing = [n for n in active if n["status"] == "in_progress"]
     blocked = [n for n in active if n["status"] == "blocked"]
+    planned = [n for n in active if n["status"] == "planned"]
     pending = [n for n in ordered if n["status"] == "pending_approval"]
-    phase = active[-1]["phase"] if active else "尚未开始"
+    started = [n for n in active if n["status"] in {"completed", "in_progress", "blocked"}]
+    phase = started[-1]["phase"] if started else "尚未开始"
     lines = [
         f"# {project['name']}：当前状态", "",
         f"最近更新：{max((n['updated_at'] for n in ordered), default=project['created_at'])}", "",
         f"当前阶段：**{phase}**", "",
-        f"节点概况：已完成 {len(done)}，进行中 {len(doing)}，受阻 {len(blocked)}，待确认 {len(pending)}。", "",
+        f"节点概况：已完成 {len(done)}，进行中 {len(doing)}，待开发 {len(planned)}，受阻 {len(blocked)}，待确认 {len(pending)}。", "",
         "## 最近完成", "",
     ]
     lines.extend(f"- `{n['id']}` {_md(n['title'])}（{n['evidence_level']}）" for n in done[-8:])
@@ -311,6 +319,11 @@ def render_status(project: dict[str, Any], nodes: dict[str, dict[str, Any]]) -> 
     lines.extend(["", "## 进行中与阻碍", ""])
     lines.extend(f"- `{n['id']}` {_md(n['title'])}：{n['status']}" for n in doing + blocked)
     if not doing and not blocked:
+        lines.append("- 暂无")
+    lines.extend(["", "## 待开发需求", ""])
+    requirements = [n for n in planned if n["kind"] == "requirement"]
+    lines.extend(f"- `{n['id']}` {_md(n['title'])}：{_md(n['summary'])}" for n in requirements)
+    if not requirements:
         lines.append("- 暂无")
     lines.extend(["", "## 下一步", ""])
     has_successor = {predecessor for n in active for predecessor in n["predecessors"]}
@@ -331,7 +344,7 @@ def _mermaid_label(value: str) -> str:
 
 
 def render_flow(project: dict[str, Any], nodes: dict[str, dict[str, Any]], phase: str | None = None) -> str:
-    ordered = sorted(nodes.values(), key=lambda x: (x["occurred_at"], x["created_at"], x["id"]))
+    ordered = sorted(nodes.values(), key=lambda x: (x["occurred_at"], x["created_at"]))
     if phase:
         ordered = [n for n in ordered if n["phase"] == phase]
     lines = [f"# {project['name']}：开发流程", "", "图中的虚线表示未采用或失败的路径。", "", "```mermaid", "flowchart TD"]
@@ -352,9 +365,12 @@ def render_flow(project: dict[str, Any], nodes: dict[str, dict[str, Any]], phase
         lines.append("    end")
     for n in ordered:
         for predecessor in n["predecessors"]:
-            if predecessor in ids:
+            if predecessor in ids and predecessor not in n.get("affects", []):
                 arrow = "-.->" if n["kind"] == "failed_approach" or n["status"] == "failed" else "-->"
                 lines.append(f'    {ids[predecessor]} {arrow} {ids[n["id"]]}')
+        for affected in n.get("affects", []):
+            if affected in ids:
+                lines.append(f'    {ids[affected]} -. 新需求影响 .-> {ids[n["id"]]}')
     lines.extend(["```", "", "## 节点索引", ""])
     for n in ordered:
         lines.append(f"- `{n['id']}` [{n['phase']}] {n['title']} — {n['status']}")
@@ -375,6 +391,21 @@ def render_flow(project: dict[str, Any], nodes: dict[str, dict[str, Any]], phase
             )
         if n["outcome"]:
             lines.append(f"- 后续结果：{_md(n['outcome'])}")
+        lines.append("")
+    requirements = [n for n in ordered if n["kind"] == "requirement"]
+    lines.extend(["", "## 新增需求与验收", ""])
+    if not requirements:
+        lines.append("暂无需求节点。")
+    for n in requirements:
+        lines.extend([
+            f"### `{n['id']}` {_md(n['title'])}", "",
+            f"- 内容：{_md(n['summary'])}",
+            f"- 状态：{n['status']}",
+        ])
+        if n.get("affects"):
+            lines.append(f"- 影响旧节点：{', '.join('`' + item + '`' for item in n['affects'])}")
+        for criterion in n.get("acceptance_criteria", []):
+            lines.append(f"- 验收条件：{_md(criterion)}")
         lines.append("")
     return "\n".join(lines) + "\n"
 
@@ -467,7 +498,7 @@ def query_nodes(nodes: dict[str, dict[str, Any]], text: str, kind: str | None, p
             continue
         haystack = " ".join([
             n["title"], n["summary"], n["rationale"], n["outcome"],
-            n["chosen_option"], *n["next_steps"],
+            n["chosen_option"], *n["next_steps"], *n.get("acceptance_criteria", []),
             *(" ".join(o.values()) for o in n["options"]),
         ]).casefold()
         if all(term in haystack for term in terms):

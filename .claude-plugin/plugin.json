@@ -1,0 +1,7 @@
+{
+  "name": "dev-memory-agent",
+  "version": "0.2.0",
+  "description": "Project-local development memory shared with Codex and Claude Code.",
+  "author": {"name": "Dev Memory Agent"},
+  "hooks": "./hooks/claude_hooks.json"
+}

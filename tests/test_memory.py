@@ -141,6 +141,47 @@ class MemoryTests(unittest.TestCase):
         output = subprocess.check_output(command, input=json.dumps(event).encode("utf-8"))
         self.assertEqual(output, b"")
 
+    def test_claude_turns_share_memory_and_require_a_decision_each_time(self):
+        hook = [sys.executable, str(ROOT / "hooks" / "claude_memory.py")]
+        session = "claude-session-123"
+
+        def fire(name, **extra):
+            event = {
+                "cwd": str(self.root),
+                "session_id": session,
+                "hook_event_name": name,
+                **extra,
+            }
+            return subprocess.check_output(hook, input=json.dumps(event).encode("utf-8"))
+
+        self.assertIn(b"Development memory is enabled", fire("SessionStart"))
+        prompt = json.loads(fire("UserPromptSubmit", prompt="private prompt text"))
+        context = prompt["hookSpecificOutput"]["additionalContext"]
+        first_turn = re.search(r"claude-[0-9a-f]{32}", context).group()
+        self.assertEqual(json.loads(fire("Stop"))["decision"], "block")
+        self.assertNotIn(
+            "private prompt text",
+            "".join(path.read_text(encoding="utf-8") for path in (self.root / ".dev-memory" / ".runtime").rglob("*.json")),
+        )
+        subprocess.check_call([
+            sys.executable, str(ROOT / "memory.py"), "ack",
+            "--project", str(self.root), "--turn-id", first_turn,
+        ], stdout=subprocess.DEVNULL)
+        self.assertEqual(json.loads(fire("Stop")), {})
+
+        second = json.loads(fire("UserPromptSubmit", prompt="another private prompt"))
+        second_turn = re.search(r"claude-[0-9a-f]{32}", second["hookSpecificOutput"]["additionalContext"]).group()
+        self.assertNotEqual(first_turn, second_turn)
+        self.assertEqual(json.loads(fire("Stop"))["decision"], "block")
+        input_path = self.root / ".dev-memory" / "inbox" / "node.json"
+        input_path.write_text(json.dumps(self.sample(), ensure_ascii=False), encoding="utf-8")
+        subprocess.check_call([
+            sys.executable, str(ROOT / "memory.py"), "record",
+            "--project", str(self.root), "--input", str(input_path), "--turn-id", second_turn,
+        ], stdout=subprocess.DEVNULL)
+        self.assertEqual(json.loads(fire("Stop")), {})
+        self.assertEqual(len(load_nodes(self.root)), 1)
+
 
 if __name__ == "__main__":
     unittest.main()

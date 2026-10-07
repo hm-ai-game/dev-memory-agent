@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Project-local, portable development memory for Codex.
+"""Project-local, portable development memory for coding agents.
 
 Only distilled development facts are stored. Conversation transcripts are never
 copied into the project memory directory.
@@ -418,7 +418,7 @@ def render_handoff(project: dict[str, Any], nodes: dict[str, dict[str, Any]]) ->
         "`NODES.jsonl` 每行是一个节点版本；同一 ID 以最高 revision 为准。"
         "历史版本保留，以便了解决策如何变化。\n\n"
         f"项目 ID：`{project['project_id']}`。当前有效节点：{len(nodes)}。\n\n"
-        "记录仅包含提炼的开发节点，不包含 Codex 对话原文。"
+        "记录仅包含提炼的开发节点，不包含 AI 对话原文。"
         "证据等级分别为 unverified、reported、observed、tested；"
         "不要把 reported 当作测试通过。\n"
     )
@@ -441,7 +441,7 @@ def install_agents_note(root: Path) -> None:
         "## Development memory\n\n"
         "This project uses `.dev-memory/` for durable development nodes. "
         "At the start of work, read `.dev-memory/PROJECT.md` and `.dev-memory/STATUS.md`. "
-        "Before finishing a Codex turn that implements, verifies, rejects, or chooses a development approach, "
+        "Before finishing a coding-agent turn that implements, verifies, rejects, or chooses a development approach, "
         "use the installed `dev-memory` skill to record concise structured nodes. "
         "Do not store conversation transcripts. Obtain user confirmation before approving "
         "a major architectural or project-direction change.\n"
@@ -509,7 +509,7 @@ def query_nodes(nodes: dict[str, dict[str, Any]], text: str, kind: str | None, p
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="Codex 开发节点记忆")
+    parser = argparse.ArgumentParser(description="开发节点记忆")
     sub = parser.add_subparsers(dest="command", required=True)
     init = sub.add_parser("init", help="在项目中启用记忆")
     init.add_argument("--project", type=Path, default=Path.cwd())

@@ -1,0 +1,12 @@
+{
+  "name": "dev-memory-local",
+  "description": "Local development memory plugin",
+  "owner": {"name": "Dev Memory Agent"},
+  "plugins": [
+    {
+      "name": "dev-memory-agent",
+      "source": "./",
+      "description": "Project-local development memory for Claude Code"
+    }
+  ]
+}

@@ -181,6 +181,13 @@ def normalize_node(data: dict[str, Any], *, existing: dict[str, Any] | None = No
             "reason_for": _string(option.get("reason_for"), "options.reason_for"),
             "reason_against": _string(option.get("reason_against"), "options.reason_against"),
         })
+    chosen_option = _string(merged.get("chosen_option"), "chosen_option")
+    rationale = _string(merged.get("rationale"), "rationale")
+    if kind == "decision":
+        if not normalized_options or not chosen_option or not rationale:
+            raise ValueError("decision 节点必须包含 options、chosen_option 和 rationale")
+        if chosen_option not in {option["name"] for option in normalized_options}:
+            raise ValueError("chosen_option 必须匹配 options 中的方案名称")
     evidence = merged.get("evidence", [])
     if not isinstance(evidence, list) or any(not isinstance(x, dict) for x in evidence):
         raise ValueError("evidence 必须是对象数组")
@@ -220,8 +227,8 @@ def normalize_node(data: dict[str, Any], *, existing: dict[str, Any] | None = No
         "status": status,
         "impact": impact,
         "options": normalized_options,
-        "chosen_option": _string(merged.get("chosen_option"), "chosen_option"),
-        "rationale": _string(merged.get("rationale"), "rationale"),
+        "chosen_option": chosen_option,
+        "rationale": rationale,
         "outcome": _string(merged.get("outcome"), "outcome"),
         "evidence_level": level,
         "evidence": normalized_evidence,
@@ -337,6 +344,10 @@ def render_flow(project: dict[str, Any], nodes: dict[str, dict[str, Any]], phase
         for n in ordered:
             if n["phase"] == phase_name:
                 label = _mermaid_label(n["title"])
+                if n["kind"] == "decision":
+                    choice = _mermaid_label(n["chosen_option"])[:36]
+                    reason = _mermaid_label(n["rationale"])[:48]
+                    label += f"<br/>选择：{choice}<br/>原因：{reason}"
                 lines.append(f'        {ids[n["id"]]}["{label}<br/>{n["status"]}"]')
         lines.append("    end")
     for n in ordered:
@@ -347,6 +358,24 @@ def render_flow(project: dict[str, Any], nodes: dict[str, dict[str, Any]], phase
     lines.extend(["```", "", "## 节点索引", ""])
     for n in ordered:
         lines.append(f"- `{n['id']}` [{n['phase']}] {n['title']} — {n['status']}")
+    decisions = [n for n in ordered if n["kind"] == "decision"]
+    lines.extend(["", "## 方案选择与原因", ""])
+    if not decisions:
+        lines.append("暂无决策节点。")
+    for n in decisions:
+        lines.extend([
+            f"### `{n['id']}` {_md(n['title'])}", "",
+            f"- 选择：{_md(n['chosen_option'])}",
+            f"- 选择原因：{_md(n['rationale'])}",
+        ])
+        for option in n["options"]:
+            lines.append(
+                f"- 方案 {_md(option['name'])}：可取之处 {_md(option['reason_for']) or '未记录'}；"
+                f"顾虑 {_md(option['reason_against']) or '未记录'}"
+            )
+        if n["outcome"]:
+            lines.append(f"- 后续结果：{_md(n['outcome'])}")
+        lines.append("")
     return "\n".join(lines) + "\n"
 
 

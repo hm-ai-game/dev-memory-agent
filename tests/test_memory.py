@@ -51,7 +51,10 @@ class MemoryTests(unittest.TestCase):
         })
         self.assertEqual(len(load_nodes(self.root)), 2)
         self.assertEqual(query_nodes(load_nodes(self.root), "本地存储", None, None, 10)[0]["id"], first["id"])
-        self.assertIn("n0 --> n1", (self.root / ".dev-memory" / "FLOW.md").read_text(encoding="utf-8"))
+        flow = (self.root / ".dev-memory" / "FLOW.md").read_text(encoding="utf-8")
+        self.assertIn("n0 --> n1", flow)
+        self.assertIn("原因：首版只在 Codex 使用", flow)
+        self.assertIn("方案 远端服务：可取之处 易同步；顾虑 首版部署成本高", flow)
         self.assertIn("测试通过", json.dumps(second, ensure_ascii=False))
         self.assertIn("交接入口", (self.root / ".dev-memory" / "HANDOFF.md").read_text(encoding="utf-8"))
 
@@ -89,6 +92,12 @@ class MemoryTests(unittest.TestCase):
         append_node(self.root, self.sample())
         self.assertEqual(len(load_nodes(other)), 0)
         self.assertEqual(find_project(other / "nested"), other.resolve())
+
+    def test_decision_requires_a_specific_choice_and_reason(self):
+        with self.assertRaisesRegex(ValueError, "decision 节点必须"):
+            append_node(self.root, {"kind": "decision", "title": "方案选择", "summary": "已选择"})
+        with self.assertRaisesRegex(ValueError, "chosen_option 必须匹配"):
+            append_node(self.root, self.sample(chosen_option="第三种方案"))
 
     def test_stop_hook_requests_record_or_ack_once(self):
         turn = "turn-123"

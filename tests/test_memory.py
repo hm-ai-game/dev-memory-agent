@@ -100,6 +100,14 @@ class MemoryTests(unittest.TestCase):
         output = subprocess.check_output(command, input=json.dumps(event).encode("utf-8"))
         self.assertEqual(json.loads(output), {})
 
+    def test_inactive_project_gets_no_session_context(self):
+        other = Path(self.temp.name) / "untracked"
+        other.mkdir()
+        command = [sys.executable, str(ROOT / "hooks" / "auto_memory.py")]
+        event = {"cwd": str(other), "hook_event_name": "SessionStart"}
+        output = subprocess.check_output(command, input=json.dumps(event).encode("utf-8"))
+        self.assertEqual(output, b"")
+
 
 if __name__ == "__main__":
     unittest.main()

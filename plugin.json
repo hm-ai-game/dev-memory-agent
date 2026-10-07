@@ -1,7 +1,7 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "dev-memory-agent",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Automatically distill Codex development milestones, decisions and verification into project-local memory.",
   "skills": "./skills/",
   "extensions": {

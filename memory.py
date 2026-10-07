@@ -414,6 +414,7 @@ def initialize(root: Path, name: str, goal: str, scope: str) -> dict[str, Any]:
     }
     write_json_atomic(memory / "project.json", project)
     (memory / "NODES.jsonl").touch()
+    (memory / "inbox").mkdir(exist_ok=True)
     (memory / ".gitignore").write_text(".runtime/\n.write-lock/\ninbox/\n", encoding="utf-8")
     install_agents_note(root)
     refresh(root, {})

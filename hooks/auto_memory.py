@@ -22,7 +22,8 @@ def main() -> None:
     root = find_project(Path(event.get("cwd") or Path.cwd()))
     name = event.get("hook_event_name")
     if root is None:
-        print("{}")
+        if name != "SessionStart":
+            print("{}")
         return
     turn_id = event.get("turn_id")
     command = f'python "{PLUGIN_ROOT / "memory.py"}"'

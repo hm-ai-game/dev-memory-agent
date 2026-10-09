@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#03060c">
+  <title>开发记忆 · 宇宙</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <main id="app" class="is-universe">
+    <canvas id="space" aria-label="项目宇宙与记忆节点星图"></canvas>
+    <div class="vignette" aria-hidden="true"></div>
+    <div id="galaxy-labels" class="galaxy-labels" aria-label="项目星云入口"></div>
+    <nav id="cover-nav" class="cover-nav" aria-label="首页导航">
+      <button data-action="universe">Universe</button>
+      <button data-action="projects">Projects</button>
+      <button data-action="timeline">Timeline</button>
+      <button data-action="search">Search</button>
+      <button data-action="settings">Settings</button>
+    </nav>
+
+    <header class="masthead">
+      <div class="eyebrow"><span class="brand-mark" aria-hidden="true">✦</span> DEV MEMORY <span class="hairline"></span> LOCAL UNIVERSE</div>
+      <h1 id="scene-title">Universe</h1>
+      <p id="scene-subtitle">每片星云是一段项目旅程，每颗亮星是一条开发记忆。</p>
+    </header>
+
+    <div id="overview-meta" class="overview-meta" aria-live="polite">
+      <div><strong id="project-count">0</strong><span>项目星云</span></div>
+      <div><strong id="node-count">0</strong><span>记忆节点</span></div>
+    </div>
+
+    <div id="scene-hint" class="scene-hint">点击项目名称进入 · 滚轮缩放 · 拖动浏览</div>
+
+    <nav id="toolbar" class="toolbar" aria-label="仪表盘工具">
+      <div class="tool-group">
+        <button class="tool active" data-action="universe" aria-label="宇宙总览" title="宇宙总览"><span class="icon">✧</span><span class="tool-tip">宇宙总览</span></button>
+        <button class="tool" data-action="project" aria-label="项目星云" title="项目星云"><span class="icon">✦</span><span class="tool-tip">项目星云</span></button>
+        <button class="tool" data-action="progress" aria-label="项目进度" title="项目进度"><span class="icon">◫</span><span class="tool-tip">项目进度</span></button>
+        <button class="tool" data-action="flow" aria-label="开发流程" title="开发流程"><span class="icon">◇</span><span class="tool-tip">开发流程</span></button>
+        <button class="tool" data-action="timeline" aria-label="时间线" title="时间线"><span class="icon">⌁</span><span class="tool-tip">时间线</span></button>
+        <button class="tool" data-action="search" aria-label="搜索筛选" title="搜索筛选"><span class="icon">⌕</span><span class="tool-tip">搜索筛选</span></button>
+        <button class="tool" data-action="handoff" aria-label="交接资料" title="交接资料"><span class="icon">☷</span><span class="tool-tip">交接资料</span></button>
+        <button class="tool" data-action="projects" aria-label="项目管理" title="项目管理"><span class="icon">▦</span><span class="tool-tip">项目管理</span></button>
+      </div>
+      <div class="tool-group tool-bottom">
+        <button class="tool" data-action="reset" aria-label="重置视角" title="重置视角"><span class="icon">◎</span><span class="tool-tip">重置视角</span></button>
+      </div>
+    </nav>
+
+    <section id="panel" class="side-panel hidden" aria-label="信息面板">
+      <div class="panel-head"><div><div id="panel-kicker" class="panel-kicker"></div><h2 id="panel-title"></h2></div><button id="panel-close" class="close-button" aria-label="关闭面板">×</button></div>
+      <div id="panel-body" class="panel-body"></div>
+    </section>
+
+    <section id="node-card" class="node-card hidden" aria-label="节点详情"></section>
+    <div id="toast" class="toast hidden" role="status"></div>
+  </main>
+  <script type="module" src="/app.js"></script>
+</body>
+</html>

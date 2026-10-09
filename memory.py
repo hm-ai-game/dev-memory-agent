@@ -537,6 +537,10 @@ def build_parser() -> argparse.ArgumentParser:
         p.add_argument("--project", type=Path)
         if command == "flow":
             p.add_argument("--phase")
+    dashboard = sub.add_parser("dashboard", help="打开本地宇宙仪表盘")
+    dashboard.add_argument("--project", type=Path)
+    dashboard.add_argument("--port", type=int, default=8765)
+    dashboard.add_argument("--no-open", action="store_true")
     return parser
 
 
@@ -546,6 +550,11 @@ def main(argv: list[str] | None = None) -> int:
         if args.command == "init":
             project = initialize(args.project, args.name, args.goal, args.scope)
             print(json.dumps({"project_id": project["project_id"], "path": str(args.project.resolve() / MEMORY_DIR)}, ensure_ascii=False))
+            return 0
+        if args.command == "dashboard":
+            from dashboard.server import serve
+
+            serve(args.project, args.port, not args.no_open)
             return 0
         root = require_project(args.project)
         memory = root / MEMORY_DIR
